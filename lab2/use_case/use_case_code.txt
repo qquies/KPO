@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+actor "Пользователь" as User
+actor "БД уведомлений" as NotificationDB
+actor "БД логов" as LogDB
+
+rectangle "Умный дом" {
+  usecase "Авторизация\n(login/logout)" as UC1
+  usecase "Управление устройствами\n(вкл/выкл свет, камеры, замки, кондиционер)" as UC2
+  usecase "Управление климатом\n(настройка температуры, режимов)" as UC3
+  usecase "Управление безопасностью\n(arm/disarm, сигнализация)" as UC4
+  usecase "Просмотр уведомлений" as UC5
+  usecase "Просмотр журналов событий" as UC6
+  usecase "Планирование действий\n(расписания)" as UC7
+  usecase "Оптимизация энергопотребления" as UC8
+}
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+
+UC5 --> NotificationDB : <<использует>>
+UC6 --> LogDB : <<использует>>
+@enduml

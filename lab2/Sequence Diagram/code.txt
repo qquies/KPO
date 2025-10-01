@@ -1,1 +1,26 @@
+@startuml
+actor Пользователь as User
+participant Контроллер as Controller
+participant УмныйДом as SmartHome
+participant Лампа as Light
+participant Журнал as Log
+database БД_Логов as LogDB
+participant Уведомление as Notification
+database БД_Уведомлений as NotificationDB
 
+User -> Controller : sendCommand("Включить свет")
+Controller -> SmartHome : sendData("Включить свет")
+SmartHome -> Light : turnOn()
+Light --> SmartHome : статус = "Включено"
+
+SmartHome -> Log : recordEvent("Свет включён")
+Log -> LogDB : saveLog(log)
+LogDB --> Log : подтверждение
+
+SmartHome -> Notification : sendNotification("Свет включён")
+Notification -> NotificationDB : saveNotification(notification)
+NotificationDB --> Notification : подтверждение
+
+Notification --> User : уведомление
+
+@enduml

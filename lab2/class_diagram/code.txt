@@ -1,0 +1,181 @@
+@startuml
+' === Основные классы ===
+class User {
+  -id: int
+  -name: string
+  -email: string
+  -password: string
+  +login()
+  +logout()
+  +sendCommand()
+}
+
+class SmartHome {
+  -id: int
+  -address: string
+  +addDevice()
+  +removeDevice()
+  +getStatus()
+}
+
+Abstract class Device {
+  -id: int
+  -name: string
+  -status: string
+  +turnOn()
+  +turnOff()
+  +getStatus()
+}
+
+class Light {
+  -brightness: int
+  +setBrightness()
+}
+
+class Thermostat {
+  -temperature: double
+  +setTemperature()
+}
+
+class Camera {
+  -recording: boolean
+  +startRecording()
+  +stopRecording()
+}
+
+class DoorLock {
+  -locked: boolean
+  +lock()
+  +unlock()
+}
+
+class Controller {
+  -id: int
+  -connectionType: string
+  +connect()
+  +disconnect()
+  +sendData()
+}
+
+class Schedule {
+  -id: int
+  -time: datetime
+  -action: string
+  +setSchedule()
+  +cancelSchedule()
+}
+
+class Notification {
+  -id: int
+  -message: string
+  -time: datetime
+  +sendNotification()
+}
+
+' === Новые классы ===
+Abstract class Sensor {
+  -id: int
+  -type: string
+  -value: double
+  -unit: string
+  +readData()
+}
+
+class TemperatureSensor {
+  +readTemperature()
+}
+
+class MotionSensor {
+  +detectMotion()
+}
+
+class SmokeSensor {
+  +detectSmoke()
+}
+
+class WaterLeakSensor {
+  +detectLeak()
+}
+
+class SecuritySystem {
+  -status: string
+  +armSystem()
+  +disarmSystem()
+  +triggerAlarm()
+}
+
+class EnergyManager {
+  -currentConsumption: double
+  -maxLoad: double
+  +optimizeEnergy()
+  +turnOffUnusedDevices()
+}
+
+class ClimateControl {
+  -mode: string
+  +setClimateMode()
+  +maintainComfortLevel()
+}
+
+class Log {
+  -id: int
+  -timestamp: datetime
+  -action: string
+  -userId: int
+  +recordEvent()
+  +getLogs()
+}
+
+class Notification {
+  -id: int
+  -message: string
+  -time: datetime
+  +sendNotification()
+}
+
+class NotificationDB {
+  +saveNotification(notification: Notification)
+  +getNotifications(userId: int)
+}
+
+class Log {
+  -id: int
+  -timestamp: datetime
+  -action: string
+  -userId: int
+  +recordEvent()
+  +getLogs()
+}
+
+class LogDB {
+  +saveLog(log: Log)
+  +getLogs(userId: int)
+}
+
+' === Наследование устройств ===
+Device <|-- Light
+Device <|-- Thermostat
+Device <|-- Camera
+Device <|-- DoorLock
+
+' === Наследование датчиков ===
+Sensor <|-- TemperatureSensor
+Sensor <|-- MotionSensor
+Sensor <|-- SmokeSensor
+Sensor <|-- WaterLeakSensor
+
+' === Связи ===
+User "1" -- "1" SmartHome
+SmartHome "1" -- "*" Device
+SmartHome "1" -- "*" Sensor
+SmartHome "1" -- "*" Schedule
+SmartHome "1" -- "1" Controller
+SmartHome "1" -- "1" SecuritySystem
+SmartHome "1" -- "1" EnergyManager
+SmartHome "1" -- "1" ClimateControl
+SmartHome "1" -- "*" Log
+User "1" -- "*" Notification
+User "1" -- "*" Log
+Notification --> NotificationDB
+Log --> LogDB
+@enduml

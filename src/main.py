@@ -14,7 +14,7 @@ from ui.console_interface import ConsoleInterface
 def main():
     """Главная функция запуска системы"""
     print("=" * 60)
-    print("        🏠 СИСТЕМА УМНЫЙ ДОМ - ПРОФЕССИОНАЛЬНАЯ ВЕРСИЯ")
+    print("🏠 СИСТЕМА УМНЫЙ ДОМ")
     print("=" * 60)
     
     try:

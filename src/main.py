@@ -27,9 +27,9 @@ def main():
         interface.display_main_menu()
         
     except KeyboardInterrupt:
-        print("\n\n👋 Программа завершена пользователем")
+        print("\n\nПрограмма завершена пользователем")
     except Exception as e:
-        print(f"\n❌ Ошибка системы: {e}")
+        print(f"\nОшибка системы: {e}")
 
 if __name__ == "__main__":
     main()

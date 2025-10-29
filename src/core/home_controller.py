@@ -14,7 +14,7 @@ class HomeController:
         
     def start_system(self):
         """Запуск всей системы"""
-        self.logging_service.info("SYSTEM", "🚀 Запуск системы Умный Дом")
+        self.logging_service.info("SYSTEM", "Запуск системы Умный Дом")
         
         # Запускаем сервисы в отдельных потоках
         server_thread = threading.Thread(target=self._run_server)
@@ -40,4 +40,4 @@ class HomeController:
     def stop_system(self):
         """Остановка системы"""
         self.running = False
-        self.logging_service.info("SYSTEM", "🛑 Система остановлена")
+        self.logging_service.info("SYSTEM", "Система остановлена")

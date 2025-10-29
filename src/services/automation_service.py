@@ -6,7 +6,7 @@ class AutomationService:
         
     def run_demo_scenario(self):
         """Запуск демонстрационного сценария"""
-        print("\n🎬 ЗАПУСК ДЕМОНСТРАЦИОННОГО СЦЕНАРИЯ...")
+        print("\nЗАПУСК ДЕМОНСТРАЦИОННОГО СЦЕНАРИЯ...")
         
         steps = [
             ("lamp_living_room", "on", "Включение света в гостиной"),
@@ -17,8 +17,8 @@ class AutomationService:
         ]
         
         for device_id, action, description in steps:
-            print(f"\n🎯 {description}...")
+            print(f"\n{description}...")
             self.controller.device_manager.send_command(device_id, action)
             time.sleep(2)
         
-        print("\n✅ Демонстрационный сценарий завершен!")
+        print("\nДемонстрационный сценарий завершен!")

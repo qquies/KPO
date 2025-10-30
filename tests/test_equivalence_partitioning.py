@@ -33,7 +33,7 @@ class TestEquivalencePartitioning:
             (100, False, "Очень высокая температура"),
         ]
         
-        print("🌡️ ТЕСТИРОВАНИЕ ТЕМПЕРАТУРЫ - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
+        print("ТЕСТИРОВАНИЕ ТЕМПЕРАТУРЫ - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
         print("=" * 60)
         
         passed = 0
@@ -48,15 +48,15 @@ class TestEquivalencePartitioning:
                 # Проверяем результат
                 if result == expected_result:
                     passed += 1
-                    status = "✅ ПРОЙДЕН"
+                    status = "ПРОЙДЕН"
                 else:
-                    status = "❌ НЕ ПРОЙДЕН"
+                    status = "НЕ ПРОЙДЕН"
                 
                 print(f"  {status} | {temperature:3}°C | {description}")
                     
             except Exception as e:
                 # Если метод не реализован, пропускаем с предупреждением
-                print(f"  ⚠️ ПРОПУЩЕНО | {temperature:3}°C | {description} (ошибка: {e})")
+                print(f"  ПРОПУЩЕНО | {temperature:3}°C | {description} (ошибка: {e})")
         
         print(f"  ИТОГ: {passed}/{total} тестов пройдено")
         # Жёсткая проверка: если какой-либо кейс не прошёл — падаем
@@ -84,7 +84,7 @@ class TestEquivalencePartitioning:
             (150, False, "Яркость 150%"),
         ]
         
-        print("\n💡 ТЕСТИРОВАНИЕ ЯРКОСТИ СВЕТА - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
+        print("\nТЕСТИРОВАНИЕ ЯРКОСТИ СВЕТА - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
         print("=" * 60)
         
         passed = 0
@@ -101,20 +101,20 @@ class TestEquivalencePartitioning:
                 elif hasattr(self.controller, 'adjust_brightness'):
                     result = self.controller.adjust_brightness(brightness)
                 else:
-                    print(f"  ⚠️ ПРОПУЩЕНО | {brightness:3}% | {description} (методы не реализованы)")
+                    print(f"  ПРОПУЩЕНО | {brightness:3}% | {description} (методы не реализованы)")
                     continue
                 
                 # Проверяем результат
                 if result == expected_result:
                     passed += 1
-                    status = "✅ ПРОЙДЕН"
+                    status = "ПРОЙДЕН"
                 else:
-                    status = "❌ НЕ ПРОЙДЕН"
+                    status = "НЕ ПРОЙДЕН"
                 
                 print(f"  {status} | {brightness:3}% | {description}")
                     
             except Exception as e:
-                print(f"  ⚠️ ПРОПУЩЕНО | {brightness:3}% | {description} (ошибка: {e})")
+                print(f"  ПРОПУЩЕНО | {brightness:3}% | {description} (ошибка: {e})")
         
         print(f"  ИТОГ: {passed}/{total} тестов пройдено")
         # Жёсткая проверка
@@ -148,7 +148,7 @@ class TestEquivalencePartitioning:
             ("12 34", False, "PIN с пробелом"),
         ]
         
-        print("\n🔐 ТЕСТИРОВАНИЕ PIN-КОДА - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
+        print("\nТЕСТИРОВАНИЕ PIN-КОДА - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
         print("=" * 60)
         
         passed = 0
@@ -165,20 +165,20 @@ class TestEquivalencePartitioning:
                 elif hasattr(self.controller, 'arm_security'):
                     result = self.controller.arm_security(pin_code)
                 else:
-                    print(f"  ⚠️ ПРОПУЩЕНО | '{pin_code:6}' | {description} (методы не реализованы)")
+                    print(f"  ПРОПУЩЕНО | '{pin_code:6}' | {description} (методы не реализованы)")
                     continue
                 
                 # Проверяем результат
                 if result == expected_result:
                     passed += 1
-                    status = "✅ ПРОЙДЕН"
+                    status = "ПРОЙДЕН"
                 else:
-                    status = "❌ НЕ ПРОЙДЕН"
+                    status = "НЕ ПРОЙДЕН"
                 
                 print(f"  {status} | '{pin_code:6}' | {description}")
                     
             except Exception as e:
-                print(f"  ⚠️ ПРОПУЩЕНО | '{pin_code:6}' | {description} (ошибка: {e})")
+                print(f"  ПРОПУЩЕНО | '{pin_code:6}' | {description} (ошибка: {e})")
         
         print(f"  ИТОГ: {passed}/{total} тестов пройдено")
         # Жёсткая проверка
@@ -210,7 +210,7 @@ class TestEquivalencePartitioning:
             ("abc:de", False, "Буквы вместо цифр"),
         ]
         
-        print("\n⏰ ТЕСТИРОВАНИЕ ВРЕМЕНИ РАСПИСАНИЯ - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
+        print("\nТЕСТИРОВАНИЕ ВРЕМЕНИ РАСПИСАНИЯ - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
         print("=" * 60)
         
         passed = 0
@@ -225,20 +225,20 @@ class TestEquivalencePartitioning:
                 elif hasattr(self.controller, 'add_schedule'):
                     result = self.controller.add_schedule("test", time_str)
                 else:
-                    print(f"  ⚠️ ПРОПУЩЕНО | '{time_str:5}' | {description} (методы не реализованы)")
+                    print(f"  ПРОПУЩЕНО | '{time_str:5}' | {description} (методы не реализованы)")
                     continue
                 
                 # Проверяем результат
                 if result == expected_result:
                     passed += 1
-                    status = "✅ ПРОЙДЕН"
+                    status = "ПРОЙДЕН"
                 else:
-                    status = "❌ НЕ ПРОЙДЕН"
+                    status = "НЕ ПРОЙДЕН"
                 
                 print(f"  {status} | '{time_str:5}' | {description}")
                     
             except Exception as e:
-                print(f"  ⚠️ ПРОПУЩЕНО | '{time_str:5}' | {description} (ошибка: {e})")
+                print(f"  ПРОПУЩЕНО | '{time_str:5}' | {description} (ошибка: {e})")
         
         print(f"  ИТОГ: {passed}/{total} тестов пройдено")
         # Жёсткая проверка
@@ -266,7 +266,7 @@ class TestEquivalencePartitioning:
             (10000, False, "Очень высокое потребление"),
         ]
         
-        print("\n⚡ ТЕСТИРОВАНИЕ ПОТРЕБЛЕНИЯ ЭНЕРГИИ - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
+        print("\nТЕСТИРОВАНИЕ ПОТРЕБЛЕНИЯ ЭНЕРГИИ - ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
         print("=" * 60)
         
         passed = 0
@@ -281,20 +281,20 @@ class TestEquivalencePartitioning:
                 elif hasattr(self.controller, 'check_energy_consumption'):
                     result = self.controller.check_energy_consumption(energy)
                 else:
-                    print(f"  ⚠️ ПРОПУЩЕНО | {energy:4} Вт | {description} (методы не реализованы)")
+                    print(f"  ПРОПУЩЕНО | {energy:4} Вт | {description} (методы не реализованы)")
                     continue
                 
                 # Проверяем результат
                 if result == expected_result:
                     passed += 1
-                    status = "✅ ПРОЙДЕН"
+                    status = "ПРОЙДЕН"
                 else:
-                    status = "❌ НЕ ПРОЙДЕН"
+                    status = "НЕ ПРОЙДЕН"
                 
                 print(f"  {status} | {energy:4} Вт | {description}")
                     
             except Exception as e:
-                print(f"  ⚠️ ПРОПУЩЕНО | {energy:4} Вт | {description} (ошибка: {e})")
+                print(f"  ПРОПУЩЕНО | {energy:4} Вт | {description} (ошибка: {e})")
         
         print(f"  ИТОГ: {passed}/{total} тестов пройдено")
         # Жёсткая проверка
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     test_instance = TestEquivalencePartitioning()
     test_instance.setup_method()
     
-    print("🚀 ЗАПУСК ТЕСТОВ ЭКВИВАЛЕНТНОГО РАЗДЕЛЕНИЯ")
+    print("ЗАПУСК ТЕСТОВ ЭКВИВАЛЕНТНОГО РАЗДЕЛЕНИЯ")
     print("=" * 70)
     
     # Запускаем все тесты
@@ -316,4 +316,4 @@ if __name__ == "__main__":
     test_instance.test_energy_consumption_equivalence_partitioning()
     
     print("\n" + "=" * 70)
-    print("✅ ВСЕ ТЕСТЫ ЭКВИВАЛЕНТНОГО РАЗДЕЛЕНИЯ ЗАВЕРШЕНЫ")
+    print("ВСЕ ТЕСТЫ ЭКВИВАЛЕНТНОГО РАЗДЕЛЕНИЯ ЗАВЕРШЕНЫ")

@@ -51,7 +51,7 @@ class TestUseCaseCoverage:
             'UC5': [], 'UC6': [], 'UC7': [], 'UC8': []
         }
         
-        print("🔍 Начинаем сканирование проекта...")
+        print("Начинаем сканирование проекта...")
         
         # 1. Анализируем основные классы
         implemented = self._analyze_object_methods(controller, implemented, "HomeController")
@@ -63,7 +63,7 @@ class TestUseCaseCoverage:
         # 3. Убираем дубликаты
         implemented = self._remove_duplicates(implemented)
         
-        print(f"✅ Сканирование завершено. Найдено методов: {sum(len(methods) for methods in implemented.values())}")
+        print(f"Сканирование завершено. Найдено методов: {sum(len(methods) for methods in implemented.values())}")
         
         return implemented
 
@@ -95,10 +95,10 @@ class TestUseCaseCoverage:
         
         for package_name in packages_to_scan:
             try:
-                print(f"📦 Сканируем пакет: {package_name}")
+                print(f"Сканируем пакет: {package_name}")
                 package = importlib.import_module(package_name)
                 
-                # 👇 ДОБАВЬТЕ ЭТОТ ВЫВОД ДЛЯ ОТЛАДКИ:
+                # ДОБАВЬТЕ ЭТОТ ВЫВОД ДЛЯ ОТЛАДКИ:
                 print(f"   Путь пакета: {package.__path__}")
                 
                 # Рекурсивно обходим все модули в пакете
@@ -111,7 +111,7 @@ class TestUseCaseCoverage:
                         continue
                         
                     module_count += 1
-                    print(f"   📄 Найден модуль: {modname}")
+                    print(f"   Найден модуль: {modname}")
                         
                     try:
                         # Импортируем модуль
@@ -121,15 +121,15 @@ class TestUseCaseCoverage:
                         class_count = self._analyze_module_classes(module, modname, implemented)
                         
                         if class_count > 0:
-                            print(f"   ✅ {modname}: найдено {class_count} классов")
+                            print(f"   {modname}: найдено {class_count} классов")
                             
                     except Exception as e:
-                        print(f"   ⚠️ Ошибка в модуле {modname}: {e}")
+                        print(f"   Ошибка в модуле {modname}: {e}")
                 
                 print(f"   Всего модулей в {package_name}: {module_count}")
                         
             except ImportError:
-                print(f"⚠️ Пакет {package_name} не найден, пропускаем")
+                print(f"Пакет {package_name} не найден, пропускаем")
                 continue
                 
         return implemented
@@ -140,7 +140,7 @@ class TestUseCaseCoverage:
         
         for dir_name in additional_dirs:
             if os.path.exists(dir_name):
-                print(f"📁 Сканируем директорию: {dir_name}")
+                print(f"Сканируем директорию: {dir_name}")
                 implemented = self._scan_directory_recursive(dir_name, implemented)
                 
         return implemented
@@ -169,10 +169,10 @@ class TestUseCaseCoverage:
                             class_count = self._analyze_module_classes(module, module_name, implemented)
                             
                             if class_count > 0:
-                                print(f"   ✅ {module_name}: {class_count} классов")
+                                print(f"   {module_name}: {class_count} классов")
                                 
                     except Exception as e:
-                        print(f"   ⚠️ Ошибка в файле {file}: {e}")
+                        print(f"   Ошибка в файле {file}: {e}")
                         
         return implemented
     
@@ -203,17 +203,17 @@ class TestUseCaseCoverage:
         """Анализирует все классы в модуле"""
         class_count = 0
         
-        print(f"      🔍 Анализируем классы в {module_name}:")
+        print(f"      Анализируем классы в {module_name}:")
         
         for name, obj in inspect.getmembers(module, inspect.isclass):
             # Проверяем, что класс определен в этом модуле (а не импортирован)
             if hasattr(obj, '__module__') and obj.__module__ == module_name:
                 class_count += 1
-                print(f"         🏷️ Найден класс: {name}")
+                print(f"         Найден класс: {name}")
                 implemented = self._analyze_class_methods(obj, f"{module_name}.{name}", implemented)
         
         if class_count == 0:
-            print(f"         ❌ Классы не найдены в {module_name}")
+            print(f"         Классы не найдены в {module_name}")
                 
         return class_count
 
@@ -221,7 +221,7 @@ class TestUseCaseCoverage:
         """Анализирует методы одного класса"""
         methods = [method for method in dir(cls) if not method.startswith('_')]
         
-        print(f"            📋 Методы класса {class_name}: {methods}")
+        print(f"            Методы класса {class_name}: {methods}")
         
         for method in methods:
             method_obj = getattr(cls, method)
@@ -231,7 +231,7 @@ class TestUseCaseCoverage:
                 # Определяем Use-Case для метода
                 category = self._categorize_method(method_with_prefix, method, implemented)
                 if category:
-                    print(f"            ✅ Метод '{method}' отнесен к {category}")
+                    print(f"            Метод '{method}' отнесен к {category}")
         
         return implemented
     
@@ -334,14 +334,14 @@ class TestUseCaseCoverage:
     def _print_coverage_report(self, coverage_report):
         """Выводит подробный отчет о покрытии"""
         print("\n" + "="*70)
-        print("🎯 ОТЧЕТ О ПОКРЫТИИ USE-CASE ДИАГРАММЫ (АВТОМАТИЧЕСКОЕ СКАНИРОВАНИЕ)")
+        print("ОТЧЕТ О ПОКРЫТИИ USE-CASE ДИАГРАММЫ (АВТОМАТИЧЕСКОЕ СКАНИРОВАНИЕ)")
         print("="*70)
         
-        print(f"\n📊 ОБЩАЯ СТАТИСТИКА:")
+        print(f"\nОБЩАЯ СТАТИСТИКА:")
         print(f"   Всего методов найдено: {coverage_report['total_methods_found']}")
         print(f"   Общее покрытие Use-Case: {coverage_report['coverage_percentage']:.1f}%")
         
-        print("\n✅ ПОЛНОСТЬЮ ПОКРЫТЫЕ USE-CASE (≥3 метода):")
+        print("\nПОЛНОСТЬЮ ПОКРЫТЫЕ USE-CASE (≥3 метода):")
         for uc_id, description, features in coverage_report['covered']:
             print(f"   🟢 {uc_id}: {description}")
             print(f"      Методы ({len(features)}): {', '.join(features[:5])}" + 
@@ -352,7 +352,7 @@ class TestUseCaseCoverage:
             print(f"   🟡 {uc_id}: {description}")
             print(f"      Методы: {', '.join(features)}")
         
-        print("\n❌ НЕ ПОКРЫТЫЕ USE-CASE:")
+        print("\nНЕ ПОКРЫТЫЕ USE-CASE:")
         for uc_id, description in coverage_report['not_covered']:
             print(f"   🔴 {uc_id}: {description}")
         
@@ -368,9 +368,9 @@ class TestUseCaseCoverage:
         # Проверяем что система запускается без ошибок
         try:
             controller.start_system()
-            print("✅ Система успешно запускается")
+            print("Система успешно запускается")
         except Exception as e:
-            pytest.fail(f"❌ Система не может запуститься: {e}")
+            pytest.fail(f"Система не может запуститься: {e}")
 
     def test_use_case_integration(self):
         """Проверяем, что Use-Case могут работать вместе"""
@@ -379,7 +379,7 @@ class TestUseCaseCoverage:
         # Система должна запускаться (UC1)
         controller.start_system()
         
-        print("✅ Базовая интеграция проверена - система работает")
+        print("Базовая интеграция проверена - система работает")
 
 if __name__ == "__main__":
     # Запуск теста напрямую для отладки

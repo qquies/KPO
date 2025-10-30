@@ -14,17 +14,17 @@ def test_system_initialization():
         from core.home_controller import HomeController
         from ui.console_interface import ConsoleInterface
         
-        print("🧪 Тест 1: Инициализация системы...")
+        print("Тест 1: Инициализация системы...")
         controller = HomeController()
         interface = ConsoleInterface(controller)
         
         assert controller is not None, "Контроллер не создан"
         assert interface is not None, "Интерфейс не создан"
-        print("✅ Система инициализирована корректно")
+        print("Система инициализирована корректно")
         
         return True
     except Exception as e:
-        print(f"❌ Ошибка инициализации: {e}")
+        print(f"Ошибка инициализации: {e}")
         return False
 
 def test_devices_exist():
@@ -33,7 +33,7 @@ def test_devices_exist():
         from core.home_controller import HomeController
         controller = HomeController()
         
-        print("🧪 Тест 2: Проверка устройств...")
+        print("Тест 2: Проверка устройств...")
         devices = controller.get_devices()
         
         assert isinstance(devices, dict), "Устройства должны быть словарем"
@@ -42,12 +42,12 @@ def test_devices_exist():
         expected_devices = ['lamp_living_room', 'thermostat', 'security_camera']
         for device_id in expected_devices:
             assert device_id in devices, f"Устройство {device_id} отсутствует"
-            print(f"✅ Устройство {device_id} присутствует")
+            print(f"Устройство {device_id} присутствует")
         
-        print("✅ Все устройства присутствуют")
+        print("Все устройства присутствуют")
         return True
     except Exception as e:
-        print(f"❌ Ошибка проверки устройств: {e}")
+        print(f"Ошибка проверки устройств: {e}")
         return False
 
 def test_command_processing():
@@ -56,7 +56,7 @@ def test_command_processing():
         from core.home_controller import HomeController
         controller = HomeController()
         
-        print("🧪 Тест 3: Обработка команд...")
+        print("Тест 3: Обработка команд...")
         
         # Тест включения
         result = controller.send_command('lamp_living_room', 'on')
@@ -66,14 +66,14 @@ def test_command_processing():
         device_state = controller.get_device_status('lamp_living_room')
         assert device_state['state'] == 'on', "Состояние не изменилось на on"
         
-        print("✅ Команды обрабатываются корректно")
+        print("Команды обрабатываются корректно")
         return True
     except Exception as e:
-        print(f"❌ Ошибка обработки команд: {e}")
+        print(f"Ошибка обработки команд: {e}")
         return False
 
 if __name__ == '__main__':
-    print("🚀 ЗАПУСК БАЗОВЫХ ТЕСТОВ СИСТЕМЫ УМНЫЙ ДОМ")
+    print("ЗАПУСК БАЗОВЫХ ТЕСТОВ СИСТЕМЫ УМНЫЙ ДОМ")
     print("=" * 50)
     
     tests = [
@@ -89,9 +89,9 @@ if __name__ == '__main__':
         if test():
             passed += 1
     
-    print(f"\n📊 РЕЗУЛЬТАТ: {passed}/{total} тестов пройдено")
+    print(f"\nРЕЗУЛЬТАТ: {passed}/{total} тестов пройдено")
     
     if passed == total:
-        print("🎉 ВСЕ ТЕСТЫ ПРОЙДЕНЫ УСПЕШНО!")
+        print("ВСЕ ТЕСТЫ ПРОЙДЕНЫ УСПЕШНО!")
     else:
-        print("❌ НЕКОТОРЫЕ ТЕСТЫ ПРОВАЛЕНЫ")
+        print("НЕКОТОРЫЕ ТЕСТЫ ПРОВАЛЕНЫ")

@@ -20,7 +20,7 @@ class DeviceManager:
     def add_device(self, device):
         """Добавить устройство"""
         self.devices[device.device_id] = device
-        self.logging_service.info("DEVICE", f"➕ Добавлено устройство: {device.name}")
+        self.logging_service.info("DEVICE", f"Добавлено устройство: {device.name}")
         
     def get_device(self, device_id: str):
         """Получить устройство по ID"""
@@ -47,4 +47,4 @@ class DeviceManager:
             if device.has_state_changed():
                 state_text = "включено" if device.state == "on" else "выключено"
                 self.logging_service.info("DEVICE", 
-                    f"🔄 {device.name} {state_text}")
+                    f"{device.name} {state_text}")

@@ -1,4 +1,5 @@
 import threading
+import re
 from devices.device_manager import DeviceManager
 from services.logging_service import LoggingService
 from services.automation_service import AutomationService
@@ -11,6 +12,33 @@ class HomeController:
         self.logging_service = LoggingService()
         self.automation_service = AutomationService(self)
         self.running = True
+
+    # 👇 МЕТОДЫ-ЗАГЛУШКИ
+    def set_temperature(self, temperature):
+        """Заглушка для установки температуры"""
+        # Допустимый диапазон: 15-30°C
+        return 15 <= temperature <= 30
+    
+    def set_brightness(self, brightness):
+        """Заглушка для установки яркости"""
+        # Допустимый диапазон: 0-100%
+        return 0 <= brightness <= 100
+    
+    def validate_pin(self, pin_code):
+        """Заглушка для проверки PIN-кода"""
+        # Допустимый PIN: 4-6 цифр
+        return pin_code.isdigit() and 4 <= len(pin_code) <= 6
+    
+    def set_schedule_time(self, time_str):
+        if not re.fullmatch(r"\d{2}:\d{2}", time_str):
+            return False
+        hours, minutes = time_str.split(':')
+        return 0 <= int(hours) <= 23 and 0 <= int(minutes) <= 59
+    
+    def set_energy_limit(self, energy):
+        """Заглушка для установки лимита энергии"""
+        # Допустимый диапазон: 0-5000 Вт
+        return 0 <= energy <= 5000
         
     def start_system(self):
         """Запуск всей системы"""

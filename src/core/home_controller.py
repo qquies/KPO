@@ -11,6 +11,12 @@ class HomeController:
     """Контроллер системы Умный дом"""
     
     def __init__(self):
+        # Инициализация сервисов (исправление)
+        self.device_manager = DeviceManager()
+        self.logging_service = LoggingService()
+        self.automation_service = AutomationService(self)
+        self.running = True
+
         self.devices = {
             'lamp_living_room': {
                 'name': 'Свет в гостиной', 
@@ -119,11 +125,6 @@ class HomeController:
             'server': self.server_log,
             'devices': self.device_log
         }
-
-        self.device_manager = DeviceManager()
-        self.logging_service = LoggingService()
-        self.automation_service = AutomationService(self)
-        self.running = True
 
     # 👇 МЕТОДЫ-ЗАГЛУШКИ
     def set_temperature(self, temperature):

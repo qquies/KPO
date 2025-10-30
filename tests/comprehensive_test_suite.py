@@ -90,7 +90,6 @@ def run_manual_tests():
     try:
         controller = HomeController()
         interface = ConsoleInterface(controller)
-        controller.start_system()
         
         # Техника 1: Эквивалентное разделение
         print("\n1. 🔄 ЭКВИВАЛЕНТНОЕ РАЗДЕЛЕНИЕ")
@@ -113,6 +112,8 @@ def run_manual_tests():
         
     except Exception as e:
         print(f"❌ Ошибка при ручном тестировании: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == '__main__':

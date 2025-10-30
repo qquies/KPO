@@ -40,7 +40,7 @@ class TestUseCaseCoverage:
         self._print_coverage_report(coverage_report)
         
         # Утверждаем, что основные Use-Case покрыты
-        assert coverage_report['coverage_percentage'] > 50, (
+        assert coverage_report['coverage_percentage'] >80, (
             f"Должен быть покрыт хотя бы один Use-Case. Текущее покрытие: {coverage_report['coverage_percentage']}%"
         )
     

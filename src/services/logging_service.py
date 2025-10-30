@@ -16,15 +16,15 @@ class LoggingService:
         # Сохраняем в соответствующий журнал
         if component == "SERVER":
             self.server_log.append(log_entry)
-            print(f"🔧 {log_entry}")
+            print(f"{log_entry}")
         elif component == "DEVICE":
             self.device_log.append(log_entry)
-            print(f"💡 {log_entry}")
+            print(f"{log_entry}")
         elif component == "CLIENT":
             self.client_log.append(log_entry)
-            print(f"📱 {log_entry}")
+            print(f"{log_entry}")
         else:
-            print(f"📝 {log_entry}")
+            print(f"{log_entry}")
     
     def get_logs(self, log_type: str, limit: int = 15):
         """Получить логи определенного типа"""

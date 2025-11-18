@@ -22,3 +22,8 @@ Thumbs.db
 # Конфиги с паролями
 config.local.yaml
 secrets.json
+
+# Служебные файлы с тестов
+.coverage
+.coverage.*
+htmlcov/

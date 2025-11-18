@@ -4,6 +4,7 @@ from devices.base_device import BaseDevice
 
 # Создаём тестовый класс-наследник для абстрактного BaseDevice
 class TestDevice(BaseDevice):
+    __test__ = False
     def turn_on(self):
         self.state = "on"
         return True

@@ -18,6 +18,9 @@ class LoggingService:
         if log_to_file:
             self._setup_log_file()
     
+    def get_log_types(self) -> list:
+        return ["SERVER", "DEVICE", "CLIENT", "SYSTEM"]
+
     def _setup_log_file(self):
         """Настройка файла для логирования"""
         try:
@@ -86,7 +89,7 @@ class LoggingService:
             "system": self.system_log[-20:]
         }
     
-    def clear_logs(self, log_type: str = "ALL"):
+    def clear_logs(self, log_type: str = "ALL", silent: bool = False):
         """Очистить логи"""
         if log_type == "SERVER" or log_type == "ALL":
             self.server_log.clear()
@@ -97,7 +100,10 @@ class LoggingService:
         if log_type == "SYSTEM" or log_type == "ALL":
             self.system_log.clear()
         
-        self.info("SYSTEM", f"Логи типа '{log_type}' очищены")
+        if not silent:
+            self.system_log.append(
+            f"[{datetime.now().strftime('%H:%M:%S')}] SYSTEM: Логи очищены"
+        )
     
     def get_log_statistics(self) -> dict:
         """Получить статистику по логам"""

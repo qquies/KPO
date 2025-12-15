@@ -7,6 +7,7 @@ from services.automation_service import AutomationService
 from services.event_bus import EventBus
 from services.notification_service import NotificationService
 from config.settings import Settings
+from services.schedule_service import ScheduleService
 
 class HomeController:
     """Контроллер системы Умный дом"""
@@ -19,6 +20,7 @@ class HomeController:
         self.event_bus = EventBus()
         self.device_manager = DeviceManager()
         self.automation_service = AutomationService(self)
+        self.schedule_service = ScheduleService(self)
         
         self.running = True
         
@@ -68,6 +70,12 @@ class HomeController:
         device_thread = threading.Thread(target=self._run_device_monitor)
         device_thread.daemon = True
         device_thread.start()
+
+        self.running = True
+        threading.Thread(
+        target=self.schedule_service.run,
+        daemon=True
+        ).start()
         
         return True
     

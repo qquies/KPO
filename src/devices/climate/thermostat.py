@@ -43,7 +43,8 @@ class Thermostat(BaseDevice):
             # Температура стремится к целевой с небольшими случайными колебаниями
             diff = target - self.temperature
             change = diff * 0.1 + random.uniform(-0.3, 0.3)
-            self.temperature = max(18.0, min(26.0, self.temperature + change))
+            #self.temperature = max(18.0, min(26.0, self.temperature + change))
+            self.temperature = self.temperature + change  # без max/min
             self.data["temperature"] = self.temperature
             
             # Отправляем событие при значительном изменении (>0.5°C)

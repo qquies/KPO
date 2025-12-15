@@ -10,7 +10,7 @@ class SecurityCamera(BaseDevice):
         self.data["motion_detected"] = False
         self.data["last_motion_time"] = None
         self.metadata["motion_detection_enabled"] = True
-        self.metadata["last_simulation_time"] = time.time()
+        #self.metadata["last_simulation_time"] = time.time()
         
     def turn_on(self):
         self.state = "on"

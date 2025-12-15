@@ -6,6 +6,26 @@ class NotificationService:
         self.notifications: List[Dict] = []
         self.max_notifications = 50
     
+
+    # Получение ВСЕХ уведомлений
+    def get_all_notifications(self):
+        return self.notifications
+
+
+    # Удаление уведомлений
+    def delete_notification(self, notification_id: int):
+        self.notifications = [
+            n for n in self.notifications if n["id"] != notification_id
+        ]
+
+    # Очистка уведомлений
+    def clear_notifications(self):
+        self.notifications.clear()
+
+    # Количество непрочитанных
+    def unread_count(self) -> int:
+        return len(self.get_unread_notifications())
+
     def add_notification(self, title: str, message: str, level: str = "info"):
         """Добавить уведомление"""
         notification = {

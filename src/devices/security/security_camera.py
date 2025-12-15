@@ -16,7 +16,7 @@ class SecurityCamera(BaseDevice):
         
         # Для фоновой симуляции движения
         self._motion_simulation_thread = None
-        self._stop_motion_simulation = threading.Event()
+        self._stop_motion_simulation_flag = threading.Event()  # ИЗМЕНЕНО: переименовано
         self._motion_check_interval = random.uniform(30, 60)  # 30-60 секунд
         self._last_motion_check = time.time()
         
@@ -44,7 +44,7 @@ class SecurityCamera(BaseDevice):
         self.data["recording"] = False
         self.data["motion_detected"] = False
         # Останавливаем симуляцию движения при выключении
-        self._stop_motion_simulation()
+        self._stop_motion_simulation()  # Вызываем метод, а не Event
         self.emit_event("state_changed", {"state": "off", "recording": False})
         return True
     
@@ -133,14 +133,16 @@ class SecurityCamera(BaseDevice):
             
     def _motion_simulation_loop(self):
         """Фоновый поток для симуляции обнаружения движения"""
-        while not self._stop_motion_simulation.wait(5):  # Проверка каждые 5 секунд
+        # ИЗМЕНЕНО: используем переименованный флаг
+        while not self._stop_motion_simulation_flag.wait(5):  # Проверка каждые 5 секунд
             if self.state == "on":
                 self._simulate_motion_detection()
 
     def _start_motion_simulation(self):
         """Запуск фоновой симуляции движения"""
         if self._motion_simulation_thread is None or not self._motion_simulation_thread.is_alive():
-            self._stop_motion_simulation.clear()
+            # ИЗМЕНЕНО: используем переименованный флаг
+            self._stop_motion_simulation_flag.clear()
             self._motion_simulation_thread = threading.Thread(
                 target=self._motion_simulation_loop,
                 daemon=True,
@@ -150,9 +152,19 @@ class SecurityCamera(BaseDevice):
 
     def _stop_motion_simulation(self):
         """Остановка фоновой симуляции движения"""
+        # ИЗМЕНЕНО: устанавливаем флаг остановки
+        self._stop_motion_simulation_flag.set()
+        
+        # Ждем завершения потока
         if self._motion_simulation_thread and self._motion_simulation_thread.is_alive():
-            self._stop_motion_simulation.set()
             self._motion_simulation_thread.join(timeout=2)
+            
+            # Проверяем, завершился ли поток
+            if self._motion_simulation_thread.is_alive():
+                print(f"Предупреждение: Поток симуляции движения для камеры {self.device_id} не завершился вовремя")
+            else:
+                # Очищаем ссылку на поток
+                self._motion_simulation_thread = None
 
     def enable_motion_detection(self):
         """Включить обнаружение движения"""

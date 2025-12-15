@@ -22,7 +22,7 @@ def test_turn_on_off(light):
 
     light.turn_off()
     assert light.state == "off"
-    assert light.brightness == 0
+    assert light.set_brightness == 0
 
 # Тест проверяет взаимосвязь между яркостью и состоянием лампы
 # Убеждается, что установка яркости автоматически меняет состояние (on/off)
@@ -35,7 +35,7 @@ def test_toggle_state_via_brightness(light):
     # Установим яркость 0 → выключено
     assert light.set_brightness(0) is True
     assert light.state == "off"
-    assert light.brightness == 0
+    assert light.set_brightness == 0
 
 # Тест проверяет валидацию входных значений для установки яркости
 def test_set_brightness_invalid(light):

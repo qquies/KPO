@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 import os
 
@@ -15,8 +15,9 @@ class LoggingService:
         self.log_file = "smart_home.log"
         
         # Создаем файл лога если нужно
-        if log_to_file:
+        if self.log_to_file:
             self._setup_log_file()
+            self.cleanup_old_logs(days=7)
     
     def get_log_types(self) -> list:
         return ["SERVER", "DEVICE", "CLIENT", "SYSTEM"]
@@ -39,7 +40,7 @@ class LoggingService:
     
     def info(self, component: str, message: str):
         """Записать информационное сообщение"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] {component}: {message}"
         
         # Сохраняем в соответствующий журнал
@@ -83,27 +84,11 @@ class LoggingService:
     def get_all_logs(self) -> dict:
         """Получить все логи"""
         return {
-            "server": self.server_log[-20:],    # Последние 20
-            "device": self.device_log[-20:],
-            "client": self.client_log[-20:],
-            "system": self.system_log[-20:]
+            "server": self.server_log[-75:],    # Последние 75
+            "device": self.device_log[-75:],
+            "client": self.client_log[-75:],
+            "system": self.system_log[-75:]
         }
-    
-    def clear_logs(self, log_type: str = "ALL", silent: bool = False):
-        """Очистить логи"""
-        if log_type == "SERVER" or log_type == "ALL":
-            self.server_log.clear()
-        if log_type == "DEVICE" or log_type == "ALL":
-            self.device_log.clear()
-        if log_type == "CLIENT" or log_type == "ALL":
-            self.client_log.clear()
-        if log_type == "SYSTEM" or log_type == "ALL":
-            self.system_log.clear()
-        
-        if not silent:
-            self.system_log.append(
-            f"[{datetime.now().strftime('%H:%M:%S')}] SYSTEM: Логи очищены"
-        )
     
     def get_log_statistics(self) -> dict:
         """Получить статистику по логам"""
@@ -115,3 +100,47 @@ class LoggingService:
             "total_logs": len(self.server_log) + len(self.device_log) + 
                          len(self.client_log) + len(self.system_log)
         }
+
+    def read_logs_from_file(self, limit: int = 200):
+        """Чтение логов из файла"""
+        if not self.log_to_file:
+            return []
+
+        if not os.path.exists(self.log_file):
+            return []
+
+        try:
+            with open(self.log_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            return lines[-limit:]
+        except Exception as e:
+            return [f"Ошибка чтения логов: {e}"]
+
+    def cleanup_old_logs(self, days: int = 7):
+        """Удалить логи старше N дней из файла"""
+        if not os.path.exists(self.log_file):
+            return
+
+        cutoff_date = datetime.now() - timedelta(days=days)
+        valid_lines = []
+
+        with open(self.log_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line.startswith("["):
+                    continue
+
+                try:
+                    timestamp_str = line[1:20]  # YYYY-MM-DD HH:MM:SS
+                    log_time = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+
+                    if log_time >= cutoff_date:
+                        valid_lines.append(line)
+                except ValueError:
+                    # если строка битая — оставляем
+                    valid_lines.append(line)
+
+        # Перезаписываем файл
+        with open(self.log_file, "w", encoding="utf-8") as f:
+            for line in valid_lines:
+                f.write(line + "\n")

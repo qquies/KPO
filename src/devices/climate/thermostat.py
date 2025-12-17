@@ -9,6 +9,7 @@ class Thermostat(BaseDevice):
         self.data["target_temperature"] = 22.0
         self.metadata["min_temperature"] = 15
         self.metadata["max_temperature"] = 30
+        self.type = "thermostat"
         
     def turn_on(self):
         self.state = "on"

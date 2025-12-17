@@ -13,6 +13,7 @@ class SecurityCamera(BaseDevice):
         self.data["motion_detected"] = False
         self.data["last_motion_time"] = None
         self.metadata["motion_detection_enabled"] = True
+        self.type = "security_camera" 
         
         # Для фоновой симуляции движения
         self._motion_simulation_thread = None
@@ -55,56 +56,61 @@ class SecurityCamera(BaseDevice):
             return self.turn_on()
     
     def _simulate_motion_detection(self):
-        """Периодически (раз в 30-60 секунд) 'обнаруживать движение'"""
+        """Периодическая симуляция обнаружения движения с логами и уведомлениями"""
         if self.state == "on" and self.metadata.get("motion_detection_enabled", True):
             current_time = time.time()
-            
+
             # Проверяем, прошло ли достаточно времени с последней проверки
             if current_time - self._last_motion_check >= self._motion_check_interval:
-                # Обновляем время последней проверки
                 self._last_motion_check = current_time
-                
-                # Генерируем новый случайный интервал для следующей проверки
                 self._motion_check_interval = random.uniform(30, 60)
-                
-                # Определяем вероятность обнаружения в зависимости от времени суток
+
                 probability = self._get_current_motion_probability()
-                
-                # Случайно определяем, было ли обнаружено движение
-                if random.random() < probability:
-                    # "Обнаруживаем" движение
+                detected = random.random() < probability
+
+                if detected:
+                    # Обнаружение движения
                     self.data["motion_detected"] = True
                     self.data["last_motion_time"] = current_time
-                    
-                    # Дополнительные случайные данные для реалистичности
+
                     motion_data = {
                         "device_id": self.device_id,
                         "timestamp": current_time,
-                        "motion_intensity": random.uniform(0.3, 1.0),
-                        "motion_duration": random.uniform(1, 5),  # секунды
                         "motion_location": random.choice([
                             "front_door", "back_yard", "living_room", 
                             "kitchen", "garage", "driveway"
                         ]),
-                        "confidence": random.uniform(0.7, 0.95)  # уверенность системы
+                        "motion_intensity": random.uniform(0.3, 1.0),
+                        "motion_duration": random.uniform(1, 5),
+                        "confidence": random.uniform(0.7, 0.95)
                     }
-                    
+
+                    # Логируем через LoggingService
+                    if hasattr(self, "controller") and hasattr(self.controller, "logging_service"):
+                        self.controller.logging_service.info(
+                            "DEVICE",
+                            f"Камера '{self.name}' обнаружила движение в зоне: {motion_data['motion_location']}"
+                        )
+
+                    # Создаем уведомление через NotificationService
+                    if hasattr(self, "controller") and hasattr(self.controller, "notification_service"):
+                        self.controller.notification_service.add_notification(
+                            title="Движение на камере",
+                            message=f"Камера '{self.name}' зафиксировала движение в {motion_data['motion_location']}",
+                            level="info"
+                        )
+
                     # Отправляем событие через EventBus
                     self.emit_event("motion_detected", motion_data)
-                    
-                    # Логирование для отладки
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Камера '{self.name}' "
-                          f"обнаружила движение в зоне: {motion_data['motion_location']}")
-                    
-                    # Автоматически сбрасываем обнаружение через случайное время
-                    reset_time = random.uniform(8, 15)  # 8-15 секунд
+
+                    # Сброс через случайное время
+                    reset_time = random.uniform(8, 15)
                     threading.Timer(reset_time, self._reset_motion_detection).start()
-                    
                 else:
-                    # Если движение уже было обнаружено, проверяем не пора ли его сбросить
+                    # Сброс обнаружения, если движение уже было
                     if self.data.get("motion_detected", False):
                         last_motion = self.data.get("last_motion_time")
-                        if last_motion and (current_time - last_motion > 10):  # Сброс через 10 секунд
+                        if last_motion and (current_time - last_motion > 10):
                             self._reset_motion_detection()
 
     def _get_current_motion_probability(self):

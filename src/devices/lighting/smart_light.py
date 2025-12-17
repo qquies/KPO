@@ -11,6 +11,8 @@ class SmartLight(BaseDevice):
     def __init__(self, device_id: str, name: str):
         super().__init__(device_id, name, "light")
 
+        self.type = "lamp"
+
         # данные устройства
         self.data["brightness"] = 0
         self.data["color_temp"] = 4000

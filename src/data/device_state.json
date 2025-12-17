@@ -1,0 +1,45 @@
+{
+    "lamp_living_room": {
+        "type": "lamp",
+        "state": "on",
+        "data": {
+            "brightness": 80,
+            "color_temp": 4000,
+            "color": "#FFFFFF",
+            "temperature": 22.0
+        }
+    },
+    "thermostat": {
+        "type": "thermostat",
+        "state": "off",
+        "data": {
+            "temperature": 22.0,
+            "target_temperature": 22.0
+        }
+    },
+    "security_camera": {
+        "type": "security_camera",
+        "state": "off",
+        "data": {
+            "recording": false,
+            "motion_detected": false,
+            "last_motion_time": null
+        }
+    },
+    "smoke_sensor": {
+        "type": "smoke",
+        "state": "off",
+        "data": {
+            "enabled": false,
+            "triggered": false
+        }
+    },
+    "water_leak_sensor": {
+        "type": "water",
+        "state": "off",
+        "data": {
+            "enabled": false,
+            "triggered": false
+        }
+    }
+}

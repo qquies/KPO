@@ -16,6 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.home_controller import HomeController
 from services.logging_service import LoggingService
+from services.event_bus import EventBus
 
 
 class SmartHomeGUI:
@@ -35,7 +36,7 @@ class SmartHomeGUI:
         self.controller.start_system()
         
         # Переменные для обновления интерфейса
-        self.update_interval = 2000  # 2 секунды
+        self.update_interval = 3000  # 5 секунды
         
         # Стили
         self.setup_styles()
@@ -48,11 +49,20 @@ class SmartHomeGUI:
         
         # Обработка закрытия окна
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        self.controller.event_bus.subscribe(
+            EventBus.DEVICE_STATE_CHANGED,
+            self.on_device_state_changed
+        )
+
+        self.test_schedule_service()
     
     def setup_styles(self):
         """Настройка стилей для виджетов"""
         style = ttk.Style()
         style.theme_use('clam')
+
+        self.bg_beige = style.lookup("TFrame", "background")
         
         # Цветовая схема
         self.colors = {
@@ -69,27 +79,42 @@ class SmartHomeGUI:
         }
     
     def create_widgets(self):
-        """Создание всех виджетов интерфейса"""
-        # Главный контейнер
+        """Создание всех виджетов интерфейса (GRID layout)"""
+
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # GRID-конфигурация
+        main_frame.columnconfigure(0, weight=0)  # быстрые действия
+        main_frame.columnconfigure(1, weight=2)  # устройства (центр)
+        main_frame.columnconfigure(2, weight=2)  # информация
+        main_frame.rowconfigure(0, weight=1)
+
+        # ========= ЛЕВАЯ КОЛОНКА — БЫСТРЫЕ ДЕЙСТВИЯ =========
+        quick_frame = ttk.LabelFrame(main_frame, text="⚡ Быстрые действия", padding=10)
+        quick_frame.grid(row=0, column=0, sticky="ns", padx=(0, 8))
+
+        self.create_bottom_panel(quick_frame)
+
+        # ========= ЦЕНТР — УПРАВЛЕНИЕ УСТРОЙСТВАМИ =========
+        devices_frame = ttk.LabelFrame(main_frame, text="📱 Управление устройствами", padding=10)
+        devices_frame.grid(row=0, column=1, sticky="nsew", padx=(0, 8))
+
+        self.create_device_controls(devices_frame)
+
+        # ========= ПРАВО — ИНФОРМАЦИЯ =========
+        info_frame = ttk.LabelFrame(main_frame, text="📊 Информация системы", padding=10)
+        info_frame.grid(row=0, column=2, sticky="nsew")
+
+        self.create_info_panels(info_frame)
+
+    def on_device_state_changed(self, data):
+        """Метод для обработки одного изменения"""
+        device_id = data['device_id']
+        device_info = self.controller.device_manager.get_device_status(device_id)
         
-        # Левая панель - Управление устройствами
-        left_frame = ttk.LabelFrame(main_frame, text="📱 Управление устройствами", padding=10)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
-        
-        # Правая панель - Информация и логи
-        right_frame = ttk.LabelFrame(main_frame, text="📊 Информация системы", padding=10)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
-        
-        # Левая панель: Устройства
-        self.create_device_controls(left_frame)
-        
-        # Правая панель: Информация
-        self.create_info_panels(right_frame)
-        
-        # Нижняя панель - Быстрые действия
-        self.create_bottom_panel(main_frame)
+        if device_id in self.device_frames:
+            self.device_frames[device_id].update_state(device_info)
     
     def create_device_controls(self, parent):
         """Создание панели управления устройствами"""
@@ -98,7 +123,13 @@ class SmartHomeGUI:
         devices_container.pack(fill=tk.BOTH, expand=True)
         
         # Canvas для прокрутки
-        canvas = tk.Canvas(devices_container, bg=self.colors['bg_light'])
+        canvas = tk.Canvas(
+            devices_container,
+            highlightthickness=0,
+            bg=self.bg_beige,
+            bd=0
+            #background=self.root.cget("bg")
+        )
         scrollbar = ttk.Scrollbar(devices_container, orient="vertical", command=canvas.yview)
         self.devices_scroll_frame = ttk.Frame(canvas)
         
@@ -106,6 +137,17 @@ class SmartHomeGUI:
         scrollbar.pack(side="right", fill="y")
         canvas.pack(side="left", fill="both", expand=True)
         canvas.create_window((0, 0), window=self.devices_scroll_frame, anchor="nw")
+
+        window_id = canvas.create_window(
+            (0, 0),
+            window=self.devices_scroll_frame,
+            anchor="nw"
+        )
+
+        def resize_scroll_frame(event):
+            canvas.itemconfig(window_id, width=event.width)
+
+        canvas.bind("<Configure>", resize_scroll_frame)
         
         # Список устройств будет заполняться динамически
         self.device_frames = {}
@@ -136,10 +178,681 @@ class SmartHomeGUI:
         notebook.add(notifications_tab, text="🔔 Уведомления")
         self.create_notifications_tab(notifications_tab)
         
-        # Вкладка 4: Демо сценарии
+        # Вкладка 4: Расписание
+        schedule_tab = ttk.Frame(notebook)
+        notebook.add(schedule_tab, text="📅 Расписание")
+        self.create_schedule_tab(schedule_tab)
+        
+        # Вкладка 5: Демо сценарии
         demo_tab = ttk.Frame(notebook)
-        notebook.add(demo_tab, text="🎬 Демо")
+        notebook.add(demo_tab, text="🎬 Сценарии")
         self.create_demo_tab(demo_tab)
+
+    def create_schedule_tab(self, parent):
+        """Создание вкладки с расписанием"""
+        # Панель управления
+        control_frame = ttk.Frame(parent)
+        control_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        # Кнопка добавления задачи была здесь, но давайте проверим что она создается
+        ttk.Button(control_frame, text="➕ Добавить задачу", 
+                command=self.add_schedule_task).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="🔄 Обновить", 
+                command=self.refresh_schedule).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="✏️ Редактировать", 
+                command=self.edit_selected_task).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="🗑️ Удалить", 
+                command=self.remove_selected_task).pack(side=tk.LEFT, padx=5)
+        
+        # Таблица с задачами
+        schedule_frame = ttk.Frame(parent)
+        schedule_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Treeview для отображения задач
+        columns = ("time", "device", "action", "days", "status", "added", "index")
+        self.schedule_tree = ttk.Treeview(schedule_frame, columns=columns, 
+                                        show="headings", height=15)
+        
+        # Настройка колонок
+        column_config = [
+            ("time", "Время", 80),
+            ("device", "Устройство", 150),
+            ("action", "Действие", 100),
+            ("days", "Дни", 100),
+            ("status", "Статус", 80),
+            ("added", "Добавлено", 120)
+        ]
+        
+        for col_id, heading, width in column_config:
+            self.schedule_tree.heading(col_id, text=heading)
+            self.schedule_tree.column(col_id, width=width)
+        
+        # Полоса прокрутки
+        scrollbar = ttk.Scrollbar(schedule_frame, orient="vertical", 
+                                command=self.schedule_tree.yview)
+        self.schedule_tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.schedule_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Привязка двойного клика для редактирования
+        self.schedule_tree.bind("<Double-1>", self.edit_schedule_task)
+        
+        # Обновляем список задач
+        self.refresh_schedule()
+
+    def edit_selected_task(self):
+        """Редактировать выбранную задачу"""
+        selection = self.schedule_tree.selection()
+        if not selection:
+            messagebox.showwarning("Внимание", "Выберите задачу для редактирования!")
+            return
+        
+        # Получаем данные выбранной задачи
+        item = self.schedule_tree.item(selection[0])
+        item_values = item['values']
+        
+        # Получаем индекс задачи из скрытой колонки
+        if len(item_values) >= 7:  # Проверяем наличие индекса
+            task_index = item_values[6]  # Индекс в скрытой колонке
+            
+            # Получаем все задачи
+            if hasattr(self.controller, 'schedule_service'):
+                tasks = self.controller.schedule_service.get_all_tasks()
+                
+                # Находим задачу по индексу
+                task_to_edit = None
+                for task in tasks:
+                    if task.get("index") == task_index:
+                        task_to_edit = task
+                        break
+                
+                if task_to_edit:
+                    # Открываем диалог редактирования
+                    self.open_edit_task_dialog(task_to_edit)
+                else:
+                    messagebox.showerror("Ошибка", "Не удалось найти задачу для редактирования")
+        else:
+            messagebox.showerror("Ошибка", "Не удалось получить информацию о задаче")
+
+    def open_edit_task_dialog(self, task):
+        """Открыть диалог редактирования задачи"""
+        # Создаем диалог
+        dialog = tk.Toplevel(self.root)
+        dialog.title("✏️ Редактировать задачу")
+        dialog.geometry("400x500")
+        dialog.resizable(False, False)
+        
+        # Основной фрейм
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        ttk.Label(main_frame, text="✏️ Редактирование задачи", 
+                font=('Arial', 12, 'bold')).pack(pady=10)
+        
+        # Отображаем информацию о задаче
+        info_frame = ttk.LabelFrame(main_frame, text="Текущие параметры", padding=10)
+        info_frame.pack(fill=tk.X, pady=10)
+        
+        info_text = f"Время: {task['time']}\n"
+        info_text += f"Устройство: {task['device_id']}\n"
+        info_text += f"Действие: {task['action']}\n"
+        
+        ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
+        
+        # Поле для нового времени
+        time_frame = ttk.Frame(main_frame)
+        time_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(time_frame, text="Новое время (ЧЧ:ММ):").pack(side=tk.LEFT)
+        time_var = tk.StringVar(value=task['time'])
+        time_entry = ttk.Entry(time_frame, textvariable=time_var, width=10)
+        time_entry.pack(side=tk.LEFT, padx=10)
+        
+        # Чекбокс для активации/деактивации
+        enabled_var = tk.BooleanVar(value=task['enabled'])
+        ttk.Checkbutton(main_frame, text="Задача активна", 
+                        variable=enabled_var).pack(anchor=tk.W, pady=10)
+        
+        # Кнопки
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=20)
+        
+        def save_changes():
+            """Сохранить изменения"""
+            new_time = time_var.get()
+            
+            # Проверяем формат времени
+            try:
+                hours, minutes = map(int, new_time.split(':'))
+                if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Ошибка", 
+                                "Неверный формат времени! Используйте ЧЧ:ММ (например, 08:30)")
+                return
+            
+            try:
+                # Обновляем задачу
+                success = self.controller.schedule_service.update_task(
+                    task_index=task["index"],
+                    new_time=new_time,
+                    enabled=enabled_var.get()
+                )
+                
+                if success:
+                    messagebox.showinfo("Успех", "Задача успешно обновлена!")
+                    self.refresh_schedule()
+                    dialog.destroy()
+                else:
+                    messagebox.showerror("Ошибка", "Не удалось обновить задачу!")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Ошибка при обновлении задачи: {str(e)}")
+        
+        ttk.Button(button_frame, text="💾 Сохранить", 
+                command=save_changes).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="❌ Отмена", 
+                command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def add_schedule_task(self):
+        """Диалог добавления новой задачи в расписание"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("➕ Добавить задачу в расписание")
+        dialog.geometry("500x650")  # Увеличим высоту окна
+        dialog.resizable(False, False)
+        
+        # Создаем основной фрейм с прокруткой
+        main_frame = ttk.Frame(dialog)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Создаем Canvas для прокрутки
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Фрейм для ввода времени
+        time_frame = ttk.LabelFrame(scrollable_frame, text="⏰ Время выполнения", padding=10)
+        time_frame.pack(fill=tk.X, pady=5)
+        
+        time_inner_frame = ttk.Frame(time_frame)
+        time_inner_frame.pack()
+        
+        ttk.Label(time_inner_frame, text="Час (0-23):").grid(row=0, column=0, padx=5, pady=5)
+        hour_var = tk.StringVar(value="08")
+        hour_spin = ttk.Spinbox(time_inner_frame, from_=0, to=23, textvariable=hour_var, 
+                            width=5, wrap=True)
+        hour_spin.grid(row=0, column=1, padx=5, pady=5)
+        
+        ttk.Label(time_inner_frame, text="Минута (0-59):").grid(row=0, column=2, padx=5, pady=5)
+        minute_var = tk.StringVar(value="00")
+        minute_spin = ttk.Spinbox(time_inner_frame, from_=0, to=59, textvariable=minute_var, 
+                                width=5, wrap=True)
+        minute_spin.grid(row=0, column=3, padx=5, pady=5)
+        
+        # Фрейм для выбора устройства
+        device_frame = ttk.LabelFrame(scrollable_frame, text="📱 Устройство", padding=10)
+        device_frame.pack(fill=tk.X, pady=5)
+        
+        # Получаем список устройств
+        devices = self.controller.device_manager.get_all_devices_status()
+        device_list = [(device_id, info.get("name", device_id), info.get("type", "unknown")) 
+                    for device_id, info in devices.items()]
+        
+        # Создаем список для отображения
+        device_names = []
+        device_ids = []
+        device_types = {}
+        
+        # Добавляем устройства с указанием типа
+        for device_id, name, dtype in device_list:
+            display_name = f"{name} ({dtype})"
+            device_names.append(display_name)
+            device_ids.append(device_id)
+            device_types[device_id] = dtype
+        
+        ttk.Label(device_frame, text="Выберите устройство:").pack(anchor=tk.W, pady=2)
+        device_var = tk.StringVar(value=device_names[0] if device_names else "")
+        device_combo = ttk.Combobox(device_frame, textvariable=device_var, 
+                                values=device_names, state="readonly", height=10)
+        device_combo.pack(fill=tk.X, pady=5)
+        
+        # Фрейм для выбора действия
+        action_frame = ttk.LabelFrame(scrollable_frame, text="⚡ Действие", padding=10)
+        action_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(action_frame, text="Выберите действие:").pack(anchor=tk.W, pady=2)
+        action_var = tk.StringVar(value="on")
+        action_combo = ttk.Combobox(action_frame, textvariable=action_var, 
+                                values=["on", "off", "toggle"], state="readonly")
+        action_combo.pack(fill=tk.X, pady=5)
+        
+        # Фрейм для параметров (будет скрыт/показан динамически)
+        param_frame = ttk.LabelFrame(scrollable_frame, text="🔧 Параметры", padding=10)
+        
+        # Для термостата - выбор температуры
+        temp_frame = ttk.Frame(param_frame)
+        ttk.Label(temp_frame, text="Температура (°C):").pack(side=tk.LEFT, padx=5)
+        temp_var = tk.StringVar(value="22")
+        temp_spin = ttk.Spinbox(temp_frame, from_=15, to=30, textvariable=temp_var, 
+                            width=5, wrap=True)
+        temp_spin.pack(side=tk.LEFT, padx=5)
+        
+        # Для лампы - выбор яркости
+        brightness_frame = ttk.Frame(param_frame)
+        ttk.Label(brightness_frame, text="Яркость (%):").pack(side=tk.LEFT, padx=5)
+        brightness_var = tk.StringVar(value="80")
+        brightness_spin = ttk.Spinbox(brightness_frame, from_=0, to=100, textvariable=brightness_var, 
+                                    width=5, wrap=True)
+        brightness_spin.pack(side=tk.LEFT, padx=5)
+        
+        # Функция для обновления доступных действий в зависимости от устройства
+        def update_actions(*args):
+            selected_name = device_var.get()
+            if selected_name and selected_name in device_names:
+                index = device_names.index(selected_name)
+                device_id = device_ids[index]
+                device_type = device_types.get(device_id, "unknown")
+                
+                # Скрываем параметры
+                param_frame.pack_forget()
+                
+                # Обновляем доступные действия
+                if device_type == "thermostat":
+                    action_combo['values'] = ["on", "off", "toggle", "set_temperature", "set_temperature_and_on"]
+                    action_var.set("set_temperature_and_on")
+                elif device_type == "lamp":
+                    action_combo['values'] = ["on", "off", "toggle", "set_brightness", "set_brightness_and_on"]
+                    action_var.set("set_brightness_and_on")
+                else:
+                    action_combo['values'] = ["on", "off", "toggle"]
+                    action_var.set("on")
+        
+        # Функция для отображения параметров в зависимости от действия
+        def update_params(*args):
+            action = action_var.get()
+            selected_name = device_var.get()
+            
+            if selected_name and selected_name in device_names:
+                index = device_names.index(selected_name)
+                device_id = device_ids[index]
+                device_type = device_types.get(device_id, "unknown")
+                
+                # Показываем/скрываем параметры
+                if "temperature" in action and device_type == "thermostat":
+                    param_frame.pack(fill=tk.X, pady=5)
+                    temp_frame.pack(pady=5)
+                    brightness_frame.pack_forget()
+                elif "brightness" in action and device_type == "lamp":
+                    param_frame.pack(fill=tk.X, pady=5)
+                    brightness_frame.pack(pady=5)
+                    temp_frame.pack_forget()
+                else:
+                    param_frame.pack_forget()
+        
+        # Связываем события (универсальный способ)
+        def setup_trace():
+            try:
+                # Для Python 3.14+
+                if hasattr(device_var, 'trace_add'):
+                    device_var.trace_add("write", lambda *args: update_actions())
+                    action_var.trace_add("write", lambda *args: update_params())
+                else:
+                    # Для Python < 3.14
+                    device_var.trace("w", lambda *args: update_actions())
+                    action_var.trace("w", lambda *args: update_params())
+            except:
+                # Альтернатива: привязка к событиям Combobox
+                device_combo.bind('<<ComboboxSelected>>', lambda e: update_actions())
+                action_combo.bind('<<ComboboxSelected>>', lambda e: update_params())
+        
+        setup_trace()
+        
+        # Фрейм для выбора дней недели
+        days_frame = ttk.LabelFrame(scrollable_frame, text="📅 Дни недели", padding=10)
+        days_frame.pack(fill=tk.X, pady=5)
+        
+        day_names = ["Понедельник", "Вторник", "Среда", "Четверг", 
+                    "Пятница", "Суббота", "Воскресенье"]
+        day_vars = []
+        
+        for i, day_name in enumerate(day_names):
+            var = tk.BooleanVar(value=(i < 5))  # По умолчанию будни
+            day_vars.append(var)
+            cb = ttk.Checkbutton(days_frame, text=day_name, variable=var)
+            cb.pack(anchor=tk.W, pady=2)
+        
+        # Быстрые выборы дней
+        quick_days_frame = ttk.Frame(days_frame)
+        quick_days_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Button(quick_days_frame, text="Все дни", 
+                command=lambda: [v.set(True) for v in day_vars]).pack(side=tk.LEFT, padx=2)
+        ttk.Button(quick_days_frame, text="Только будни", 
+                command=lambda: [v.set(i < 5) for i, v in enumerate(day_vars)]).pack(side=tk.LEFT, padx=2)
+        ttk.Button(quick_days_frame, text="Только выходные", 
+                command=lambda: [v.set(i >= 5) for i, v in enumerate(day_vars)]).pack(side=tk.LEFT, padx=2)
+        
+        # Фрейм для статуса
+        status_frame = ttk.LabelFrame(scrollable_frame, text="✅ Статус", padding=10)
+        status_frame.pack(fill=tk.X, pady=5)
+        
+        enabled_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(status_frame, text="Включить задачу", 
+                    variable=enabled_var).pack(anchor=tk.W, pady=2)
+        
+        # Фрейм для кнопок (должен быть ВНУТРИ scrollable_frame)
+        button_frame = ttk.Frame(scrollable_frame)
+        button_frame.pack(fill=tk.X, pady=20)
+        
+        def save_task():
+            """Сохранение задачи"""
+            # Формируем время
+            try:
+                hour = int(hour_var.get())
+                minute = int(minute_var.get())
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Ошибка", "Неверное время!")
+                return
+            
+            time_str = f"{hour:02d}:{minute:02d}"
+            
+            # Получаем ID устройства
+            selected_name = device_var.get()
+            if selected_name not in device_names:
+                messagebox.showerror("Ошибка", "Выберите устройство!")
+                return
+            
+            index = device_names.index(selected_name)
+            device_id = device_ids[index]
+            device_type = device_types.get(device_id, "unknown")
+            
+            # Получаем действие
+            action = action_var.get()
+            
+            # Обрабатываем специальные действия с параметрами
+            if action == "set_temperature":
+                try:
+                    temperature = float(temp_var.get())
+                    if not (15 <= temperature <= 30):
+                        raise ValueError
+                    # Преобразуем в команду для контроллера
+                    action_cmd = f"set_temperature:{temperature}"
+                except ValueError:
+                    messagebox.showerror("Ошибка", "Температура должна быть от 15 до 30°C!")
+                    return
+            elif action == "set_temperature_and_on":
+                try:
+                    temperature = float(temp_var.get())
+                    if not (15 <= temperature <= 30):
+                        raise ValueError
+                    # Двойное действие: включить и установить температуру
+                    action_cmd = f"on_and_set_temperature:{temperature}"
+                except ValueError:
+                    messagebox.showerror("Ошибка", "Температура должна быть от 15 до 30°C!")
+                    return
+            elif action == "set_brightness":
+                try:
+                    brightness = int(brightness_var.get())
+                    if not (0 <= brightness <= 100):
+                        raise ValueError
+                    action_cmd = f"set_brightness:{brightness}"
+                except ValueError:
+                    messagebox.showerror("Ошибка", "Яркость должна быть от 0 до 100%!")
+                    return
+            elif action == "set_brightness_and_on":
+                try:
+                    brightness = int(brightness_var.get())
+                    if not (0 <= brightness <= 100):
+                        raise ValueError
+                    action_cmd = f"on_and_set_brightness:{brightness}"
+                except ValueError:
+                    messagebox.showerror("Ошибка", "Яркость должна быть от 0 до 100%!")
+                    return
+            else:
+                action_cmd = action
+            
+            # Получаем выбранные дни
+            selected_days = [i for i, var in enumerate(day_vars) if var.get()]
+            if not selected_days:
+                messagebox.showerror("Ошибка", "Выберите хотя бы один день!")
+                return
+            
+            # Получаем статус
+            enabled = enabled_var.get()
+            
+            # Проверяем, существует ли schedule_service
+            if not hasattr(self.controller, 'schedule_service'):
+                messagebox.showerror("Ошибка", "Сервис расписания не доступен!")
+                return
+            
+            # Добавляем задачу
+            try:
+                success = self.controller.schedule_service.add_task(
+                    time_str, device_id, action_cmd, selected_days, enabled
+                )
+                
+                if success:
+                    messagebox.showinfo("Успех", "Задача добавлена в расписание!")
+                    self.refresh_schedule()
+                    dialog.destroy()
+                else:
+                    messagebox.showerror("Ошибка", "Не удалось добавить задачу!")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Ошибка при добавлении задачи: {str(e)}")
+        
+        # Создаем кнопки (теперь они внутри scrollable_frame)
+        ttk.Button(button_frame, text="✅ Сохранить", 
+                command=save_task).pack(side=tk.LEFT, padx=5, pady=10)
+        ttk.Button(button_frame, text="❌ Отмена", 
+                command=dialog.destroy).pack(side=tk.LEFT, padx=5, pady=10)
+        
+        # Инициализация при открытии
+        update_actions()
+        update_params()
+        
+        # Прокручиваем в начало
+        canvas.yview_moveto(0)
+        
+        # Центрируем диалог
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.focus_set()
+        dialog.wait_window()
+
+    def test_schedule_service(self):
+        """Тестовый метод для проверки работы schedule_service"""
+        if hasattr(self.controller, 'schedule_service'):
+            print(f"Schedule service доступен")
+            print(f"Количество задач: {len(self.controller.schedule_service.schedule)}")
+            return True
+        else:
+            print("Schedule service НЕ доступен")
+            return False
+
+    def refresh_schedule(self):
+        """Обновить отображение расписания"""
+        # Очищаем текущий список
+        for item in self.schedule_tree.get_children():
+            self.schedule_tree.delete(item)
+        
+        # Получаем все задачи
+        if hasattr(self.controller, 'schedule_service'):
+            tasks = self.controller.schedule_service.get_all_tasks()
+            device_names = self.controller.schedule_service.get_device_names()
+            
+            for task in tasks:
+                time_str = task["time"]
+                device_name = device_names.get(task["device_id"], task["device_id"])
+                action = task["action"]
+                days = self.controller.schedule_service.get_day_names(task["days"])
+                status = "✅ Вкл" if task["enabled"] else "❌ Выкл"
+                added = task["added"][:16]  # Обрезаем секунды
+                
+                # Определяем иконку и текст действия
+                action_text = action
+                if ":" in action:
+                    parts = action.split(":", 1)
+                    command = parts[0]
+                    value = parts[1]
+                    
+                    if command == "set_temperature":
+                        action_text = f"🌡️ {value}°C"
+                    elif command == "on_and_set_temperature":
+                        action_text = f"🟢 + 🌡️ {value}°C"
+                    elif command == "set_brightness":
+                        action_text = f"💡 {value}%"
+                    elif command == "on_and_set_brightness":
+                        action_text = f"🟢 + 💡 {value}%"
+                    else:
+                        action_icon = {
+                            "on": "🟢",
+                            "off": "⚫",
+                            "toggle": "🔄"
+                        }.get(command, "⚡")
+                        action_text = f"{action_icon} {command}"
+                else:
+                    action_icon = {
+                        "on": "🟢",
+                        "off": "⚫",
+                        "toggle": "🔄"
+                    }.get(action, "⚡")
+                    action_text = f"{action_icon} {action}"
+                
+                # Вставляем в таблицу
+                self.schedule_tree.insert("", tk.END, values=(
+                    time_str,
+                    f"{device_name}",
+                    action_text,
+                    days,
+                    status,
+                    added,
+                    task.get("index") 
+                ))
+
+    def remove_selected_task(self):
+        """Удалить выбранную задачу"""
+        selection = self.schedule_tree.selection()
+        if not selection:
+            messagebox.showwarning("Внимание", "Выберите задачу для удаления!")
+            return
+        
+        if not messagebox.askyesno("Подтверждение", 
+                                "Удалить выбранную задачу?"):
+            return
+        
+        # Получаем данные выбранной задачи
+        item = self.schedule_tree.item(selection[0])
+        time_str = item['values'][0]
+        
+        # Находим индекс задачи
+        tasks = self.controller.schedule_service.get_all_tasks()
+        task_to_delete = None
+        
+        for task in tasks:
+            if task["time"] == time_str:
+                # Сравниваем другие поля для точного определения
+                device_names = self.controller.schedule_service.get_device_names()
+                device_name = device_names.get(task["device_id"], task["device_id"])
+                
+                if device_name in item['values'][1]:
+                    task_to_delete = task
+                    break
+        
+        if task_to_delete:
+            self.controller.schedule_service.remove_task(
+                task_to_delete["time"], 
+                task_to_delete["index"]
+            )
+            messagebox.showinfo("Успех", "Задача удалена!")
+            self.refresh_schedule()
+        else:
+            messagebox.showerror("Ошибка", "Не удалось найти задачу для удаления")
+
+    def edit_schedule_task(self, event=None):
+        """Редактировать выбранную задачу (двойной клик)"""
+        selection = self.schedule_tree.selection()
+        if not selection:
+            return
+        
+        # Получаем данные выбранной задачи
+        item = self.schedule_tree.item(selection[0])
+        time_str = item['values'][0]
+        
+        # Находим задачу
+        tasks = self.controller.schedule_service.get_all_tasks()
+        task_to_edit = None
+        
+        for task in tasks:
+            if task["time"] == time_str:
+                device_names = self.controller.schedule_service.get_device_names()
+                device_name = device_names.get(task["device_id"], task["device_id"])
+                
+                if device_name in item['values'][1]:
+                    task_to_edit = task
+                    break
+        
+        if task_to_edit:
+            # Создаем диалог редактирования
+            dialog = tk.Toplevel(self.root)
+            dialog.title("✏️ Редактировать задачу")
+            dialog.geometry("300x200")
+            
+            ttk.Label(dialog, text=f"Задача: {time_str} - {device_name}", 
+                    font=('Arial', 10, 'bold')).pack(pady=10)
+            
+            # Переключение статуса
+            status_frame = ttk.Frame(dialog)
+            status_frame.pack(pady=10)
+            
+            status_var = tk.BooleanVar(value=task_to_edit["enabled"])
+            
+            def toggle_status():
+                self.controller.schedule_service.toggle_task(
+                    task_to_edit["time"], 
+                    task_to_edit["index"], 
+                    status_var.get()
+                )
+                messagebox.showinfo("Успех", "Статус изменен!")
+                self.refresh_schedule()
+                dialog.destroy()
+            
+            ttk.Checkbutton(status_frame, text="Задача активна", 
+                        variable=status_var).pack()
+            
+            ttk.Button(status_frame, text="💾 Сохранить", 
+                    command=toggle_status).pack(pady=10)
+            
+            # Кнопка удаления
+            def delete_task():
+                if messagebox.askyesno("Подтверждение", "Удалить эту задачу?"):
+                    self.controller.schedule_service.remove_task(
+                        task_to_edit["time"], 
+                        task_to_edit["index"]
+                    )
+                    messagebox.showinfo("Успех", "Задача удалена!")
+                    self.refresh_schedule()
+                    dialog.destroy()
+            
+            ttk.Button(dialog, text="🗑️ Удалить задачу", 
+                    command=delete_task).pack(pady=5)
+            
+            ttk.Button(dialog, text="❌ Закрыть", 
+                    command=dialog.destroy).pack(pady=5)
+        else:
+            messagebox.showerror("Ошибка", "Не удалось найти задачу для редактирования")
     
     def create_status_tab(self, parent):
         """Создание вкладки со статусом"""
@@ -274,76 +987,245 @@ class SmartHomeGUI:
                      font=('Arial', 8), foreground='gray').pack(pady=(0, 10))
     
     def create_bottom_panel(self, parent):
-        """Создание нижней панели с быстрыми действиями"""
+        """Создание нижней панели с быстрыми действиями в столбик слева"""
+        # Создаем основной фрейм для всей нижней панели
         bottom_frame = ttk.Frame(parent)
-        bottom_frame.pack(fill=tk.X, pady=10)
+        bottom_frame.pack(fill=tk.X, pady=10, padx=10, anchor='w')  # anchor='w' прижимает к левому краю
         
-        # Кнопки быстрых действий
+        # Заголовок для панели быстрых действий
+        ttk.Label(bottom_frame, text="⚡ Быстрые действия", 
+                font=('Arial', 11, 'bold')).pack(anchor='w', pady=(0, 10))
+        
+        # Создаем фрейм для кнопок и выравниваем по левому краю
+        buttons_frame = ttk.Frame(bottom_frame)
+        buttons_frame.pack(anchor='w')  # Прижимаем контейнер с кнопками к левому краю
+        
+        # Кнопки быстрых действий В СТОЛБИК
         actions = [
             ("🔄 Все обновить", self.refresh_all),
-            ("🚪 Выйти", self.on_closing),
+            ("📅 Добавить задачу", self.add_schedule_task),
             ("⚙️ Настройки", self.show_settings),
-            ("❓ Помощь", self.show_help)
+            ("❓ Помощь", self.show_help),
+            ("🚪 Выйти", self.on_closing)
         ]
         
+        # Создаем кнопки и упаковываем их сверху вниз, выровненные по левому краю
         for text, command in actions:
-            ttk.Button(bottom_frame, text=text, command=command).pack(side=tk.LEFT, padx=5)
-    
+            btn = ttk.Button(buttons_frame, text=text, command=command)
+            # Используем anchor='w' и fill=tk.X чтобы кнопки растягивались по ширине и были слева
+            btn.pack(fill=tk.X, pady=3, anchor='w')
+        
+        # Добавляем разделитель сверху, также слева
+        ttk.Separator(parent, orient='horizontal').pack(fill=tk.X, pady=10, before=bottom_frame, anchor='w')
+        
     def create_device_card(self, device_id, device_info):
-        """Создание карточки устройства"""
-        card_frame = ttk.LabelFrame(self.devices_scroll_frame, text=f"📱 {device_info['name']}", padding=10)
-        card_frame.pack(fill=tk.X, pady=5, padx=5)
+        """Создание карточки устройства с правильным управлением состоянием"""
+
+        card_frame = ttk.LabelFrame(
+            self.devices_scroll_frame,
+            text=f"📱 {device_info['name']}",
+            padding=10
+        )
+        card_frame.pack(fill=tk.X, expand=True, pady=5, padx=5)
+
+        # ========================================================
+        # 0. ОСНОВНОЙ ФРЕЙМ СОСТОЯНИЯ (❗ ОБЯЗАТЕЛЕН)
+        # ========================================================
+        state_frame = ttk.Frame(card_frame)
+        state_frame.pack(fill=tk.X, pady=5)
         
-        # Статус устройства
-        status_frame = ttk.Frame(card_frame)
-        status_frame.pack(fill=tk.X, pady=5)
+        # ========================================================
+        # 1. МЕТКИ СОСТОЯНИЯ (будут обновляться)
+        # ========================================================
         
-        # Иконка состояния
-        state_icon = "🟢" if device_info['state'] == 'on' else "⚫"
-        state_text = "ВКЛ" if device_info['state'] == 'on' else "ВЫКЛ"
-        state_color = 'green' if device_info['state'] == 'on' else 'gray'
+        # Левый блок: иконка и основное состояние
+        left_state_frame = ttk.Frame(state_frame)
+        left_state_frame.pack(side=tk.LEFT, fill=tk.Y)
         
-        ttk.Label(status_frame, text=state_icon, font=('Arial', 14)).pack(side=tk.LEFT)
-        ttk.Label(status_frame, text=state_text, font=('Arial', 10, 'bold'), 
-                 foreground=state_color).pack(side=tk.LEFT, padx=5)
+        # Метка для иконки состояния
+        card_frame._state_icon_label = ttk.Label(left_state_frame, font=('Arial', 14))
+        card_frame._state_icon_label.pack(side=tk.LEFT, padx=2)
         
-        # Дополнительная информация
-        if device_id == "thermostat":
-            temp = device_info.get('data', {}).get('temperature', 'N/A')
-            ttk.Label(status_frame, text=f"🌡️ {temp}°C", font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
-        elif device_id == "lamp_living_room":
-            brightness = device_info.get('data', {}).get('brightness', 'N/A')
-            ttk.Label(status_frame, text=f"💡 {brightness}%", font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
-        elif device_id == "security_camera":
-            motion = device_info.get('data', {}).get('motion_detected', False)
-            motion_text = "🔴 Движение" if motion else "✅ Нет движения"
-            ttk.Label(status_frame, text=motion_text, font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
+        # Метка для текста состояния (ВКЛ/ВЫКЛ/Тревога)
+        card_frame._state_text_label = ttk.Label(left_state_frame, font=('Arial', 10, 'bold'))
+        card_frame._state_text_label.pack(side=tk.LEFT, padx=2)
         
-        # Кнопки управления
+        # Правый блок: дополнительные данные
+        right_data_frame = ttk.Frame(state_frame)
+        right_data_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Метка для дополнительных данных (температура, яркость и т.д.)
+        card_frame._data_label = ttk.Label(right_data_frame, font=('Arial', 10))
+        card_frame._data_label.pack(side=tk.LEFT, padx=10)
+        
+        # ========================================================
+        # 2. ФРЕЙМ ДЛЯ КНОПОК УПРАВЛЕНИЯ
+        # ========================================================
+        
         btn_frame = ttk.Frame(card_frame)
         btn_frame.pack(fill=tk.X, pady=5)
         
-        # Текущее состояние определяет, какие кнопки показывать
-        if device_info['state'] == 'on':
-            ttk.Button(btn_frame, text="⚫ Выключить", 
-                      command=lambda d=device_id: self.toggle_device(d, 'off')).pack(side=tk.LEFT, padx=2)
-            ttk.Button(btn_frame, text="🔄 Переключить", 
-                      command=lambda d=device_id: self.toggle_device(d, 'toggle')).pack(side=tk.LEFT, padx=2)
-        else:
-            ttk.Button(btn_frame, text="🟢 Включить", 
-                      command=lambda d=device_id: self.toggle_device(d, 'on')).pack(side=tk.LEFT, padx=2)
-            ttk.Button(btn_frame, text="🔄 Переключить", 
-                      command=lambda d=device_id: self.toggle_device(d, 'toggle')).pack(side=tk.LEFT, padx=2)
+        # Сохраняем ID устройства для кнопок
+        card_frame.device_id = device_id
+        card_frame.device_type = device_info['type']
         
-        # Специальные кнопки для разных устройств
-        if device_id == "thermostat" and device_info['state'] == 'on':
-            ttk.Button(btn_frame, text="🌡️ Установить температуру", 
-                      command=self.set_temperature_dialog).pack(side=tk.LEFT, padx=2)
-        elif device_id == "lamp_living_room" and device_info['state'] == 'on':
-            ttk.Button(btn_frame, text="💡 Установить яркость", 
-                      command=self.set_brightness_dialog).pack(side=tk.LEFT, padx=2)
+        # ========================================================
+        # 3. ФУНКЦИЯ ОБНОВЛЕНИЯ СОСТОЯНИЯ
+        # ========================================================
+        
+        def update_state(new_info):
+            """Обновить все элементы состояния устройства"""
+            # Определяем текущее состояние
+            if new_info['type'] in ['smoke', 'water']:
+                is_active = new_info['data'].get('enabled', False)
+                triggered = new_info['data'].get('triggered', False)
+            else:
+                is_active = new_info['state'] == 'on'
+                triggered = False
+            
+            # Обновляем иконку и текст состояния
+            if triggered:
+                # Режим тревоги
+                card_frame._state_icon_label.config(text="🔥")
+                card_frame._state_text_label.config(text="Тревога", foreground='red')
+                card_frame._state_text_label.config(font=('Arial', 10, 'bold'))
+            else:
+                # Нормальный режим
+                if is_active:
+                    card_frame._state_icon_label.config(text="🟢")
+                    card_frame._state_text_label.config(text="ВКЛ", foreground='green')
+                else:
+                    card_frame._state_icon_label.config(text="⚫")
+                    card_frame._state_text_label.config(text="ВЫКЛ", foreground='gray')
+                card_frame._state_text_label.config(font=('Arial', 10, 'bold'))
+            
+            # Обновляем дополнительные данные
+            if device_id == "thermostat":
+                temp = new_info.get('data', {}).get('temperature', 'N/A')
+                card_frame._data_label.config(text=f"🌡️ {temp}°C")
+            elif device_id == "lamp_living_room":
+                brightness = new_info.get('data', {}).get('brightness', 'N/A')
+                card_frame._data_label.config(text=f"💡 {brightness}%")
+            elif device_id == "security_camera":
+                motion = new_info.get('data', {}).get('motion_detected', False)
+                motion_text = "🔴 Движение" if motion else "✅ Нет движения"
+                card_frame._data_label.config(text=motion_text)
+            else:
+                card_frame._data_label.config(text="")
+        
+        # ========================================================
+        # 4. СОЗДАНИЕ КНОПОК УПРАВЛЕНИЯ
+        # ========================================================
+        
+        # Кнопки включения/выключения
+        if device_info['type'] in ['smoke', 'water']:
+            # Для датчиков - включаем/выключаем мониторинг
+            is_active = device_info['data'].get('enabled', False)
+            
+            if is_active:
+                ttk.Button(btn_frame, text="⚫ Выключить", 
+                        command=lambda d=device_id: self.toggle_device(d, 'off')).pack(side=tk.LEFT, padx=2)
+            else:
+                ttk.Button(btn_frame, text="🟢 Включить", 
+                        command=lambda d=device_id: self.toggle_device(d, 'on')).pack(side=tk.LEFT, padx=2)
+            
+            # Кнопка "Переключить"
+            ttk.Button(btn_frame, text="🔄 Переключить", 
+                    command=lambda d=device_id: self.toggle_device(d, 'toggle')).pack(side=tk.LEFT, padx=2)
+            
+            # Кнопка для эмуляции срабатывания
+            if device_info['type'] == "smoke":
+                ttk.Button(btn_frame, text="🔥 Сработать", 
+                        command=lambda d=device_id: self.trigger_device_alarm(d)).pack(side=tk.LEFT, padx=2)
+            elif device_info['type'] == "water":
+                ttk.Button(btn_frame, text="💧 Сработать", 
+                        command=lambda d=device_id: self.trigger_device_alarm(d)).pack(side=tk.LEFT, padx=2)
+        else:
+            # Для обычных устройств
+            is_active = device_info['state'] == 'on'
+            
+            if is_active:
+                ttk.Button(btn_frame, text="⚫ Выключить", 
+                        command=lambda d=device_id: self.toggle_device(d, 'off')).pack(side=tk.LEFT, padx=2)
+            else:
+                ttk.Button(btn_frame, text="🟢 Включить", 
+                        command=lambda d=device_id: self.toggle_device(d, 'on')).pack(side=tk.LEFT, padx=2)
+            
+            ttk.Button(btn_frame, text="🔄 Переключить", 
+                    command=lambda d=device_id: self.toggle_device(d, 'toggle')).pack(side=tk.LEFT, padx=2)
+            
+            # Специальные кнопки для разных устройств
+            if device_id == "thermostat" and is_active:
+                ttk.Button(btn_frame, text="🌡️ Установить температуру", 
+                        command=self.set_temperature_dialog).pack(side=tk.LEFT, padx=2)
+            elif device_id == "lamp_living_room" and is_active:
+                ttk.Button(btn_frame, text="💡 Установить яркость", 
+                        command=self.set_brightness_dialog).pack(side=tk.LEFT, padx=2)
+        
+        # ========================================================
+        # 5. ИНИЦИАЛИЗАЦИЯ И ВОЗВРАТ
+        # ========================================================
+        
+        # Инициализируем состояние
+        update_state(device_info)
+        
+        # Сохраняем функцию обновления
+        card_frame.update_state = update_state
         
         return card_frame
+
+    def trigger_device_alarm(self, device_id):
+        """Эмуляция срабатывания датчика + email"""
+        device = self.controller.device_manager.get_device(device_id)
+
+        if not device or not hasattr(device, "trigger_alarm"):
+            return
+
+        success = device.trigger_alarm()
+
+        if not success:
+            messagebox.showinfo(
+                "Информация",
+                f"{device.name} уже сработал или выключен"
+            )
+            return
+
+        # 1. GUI уведомление
+        messagebox.showwarning(
+            "⚠️ ТРЕВОГА",
+            f"{device.name} обнаружил опасность!"
+        )
+
+        # 2. Лог
+        self.controller.logging_service.info(
+            "SYSTEM",
+            f"Сработал датчик: {device.name}"
+        )
+
+        # 3. Уведомление в системе
+        if hasattr(self.controller, "notification_service"):
+            self.controller.notification_service.add_notification(
+                title=f"Тревога: {device.name}",
+                message=f"Обнаружена проблема: {device.name}",
+                level="error"
+            )
+
+        self.refresh_notifications()
+
+        # 4. 📧 ОТПРАВКА EMAIL
+        if hasattr(self.controller, "email_service"):
+            subject = f"🚨 Тревога в умном доме: {device.name}"
+
+            text = (
+                f"Датчик '{device.name}' сработал.\n\n"
+                f"Тип датчика: {device_id}\n"
+                f"Проверьте ситуацию немедленно!"
+            )
+
+            self.controller.email_service.send_alert(
+                subject,
+                text
+            )
     
     def toggle_device(self, device_id, action):
         """Переключение состояния устройства"""
@@ -426,24 +1308,24 @@ class SmartHomeGUI:
         
         ttk.Button(dialog, text="Установить", command=apply_brightness).pack(pady=10)
         ttk.Button(dialog, text="Отмена", command=dialog.destroy).pack(pady=5)
-    
+
     def refresh_devices(self):
         """Обновление отображения устройств"""
-        # Очищаем старые карточки
-        for widget in self.devices_scroll_frame.winfo_children():
-            widget.destroy()
-        
-        # Получаем статус всех устройств
         devices_status = self.controller.device_manager.get_all_devices_status()
-        
-        # Создаем новые карточки
+
         for device_id, device_info in devices_status.items():
-            self.create_device_card(device_id, device_info)
+            if device_id in self.device_frames:
+                # обновляем состояние существующей карточки
+                self.device_frames[device_id].update_state(device_info)
+            else:
+                # создаем новую карточку
+                frame = self.create_device_card(device_id, device_info)
+                self.device_frames[device_id] = frame
     
     def refresh_logs(self):
         """Обновление отображения логов"""
         log_type = self.log_type_var.get()
-        
+
         all_logs = self.controller.logging_service.read_logs_from_file(limit=300)
 
         log_type = self.log_type_var.get()
@@ -662,6 +1544,7 @@ class SmartHomeGUI:
         self.refresh_logs()
         self.refresh_notifications()
         self.refresh_status()
+        self.refresh_schedule()  # Добавляем обновление расписания
         messagebox.showinfo("Обновление", "Все данные обновлены!")
     
     def show_settings(self):
@@ -740,6 +1623,10 @@ class SmartHomeGUI:
     def on_closing(self):
         """Обработка закрытия приложения"""
         if messagebox.askokcancel("Выход", "Вы уверены, что хотите выйти?"):
+            # Сохраняем расписание перед выходом
+            if hasattr(self.controller, 'schedule_service'):
+                self.controller.schedule_service.stop()
+            
             self.controller.stop_system()
             self.root.destroy()
 

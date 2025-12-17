@@ -8,6 +8,8 @@ from services.event_bus import EventBus
 from services.notification_service import NotificationService
 from config.settings import Settings
 from services.schedule_service import ScheduleService
+from services.email_service import EmailService
+
 
 class HomeController:
     """Контроллер системы Умный дом"""
@@ -21,6 +23,7 @@ class HomeController:
         self.device_manager = DeviceManager()
         self.automation_service = AutomationService(self)
         self.schedule_service = ScheduleService(self)
+        self.email_service = EmailService()
         
         self.running = True
         
@@ -57,6 +60,13 @@ class HomeController:
                 f"Камера {device_id} начала запись", 
                 "info"
             )
+        if device_id in ["smoke_sensor", "water_leak_sensor"]:
+            if new_state in ["alarm", "leak"]:
+                self.notification_service.add_notification(
+                    title=f"Сработал {device_id}",
+                    message=f"{device_id} зафиксировал {new_state}",
+                    level="warning"
+        )
     
     def start_system(self):
         """Запуск всей системы"""

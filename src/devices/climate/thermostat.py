@@ -31,8 +31,8 @@ class Thermostat(BaseDevice):
         """Установить целевую температуру"""
         if not (self.metadata["min_temperature"] <= temperature <= self.metadata["max_temperature"]):
             return False
-        self.data["target_temperature"] = temperature
-        self.emit_event("temperature_set", {"temperature": temperature})
+        self.data["target_temperature"] = round(temperature, 1)  # ← Округлить здесь
+        self.emit_event("temperature_set", {"temperature": round(temperature, 1)})
         return True
     
     def _simulate_temperature(self):
@@ -44,10 +44,19 @@ class Thermostat(BaseDevice):
             # Температура стремится к целевой с небольшими случайными колебаниями
             diff = target - self.temperature
             change = diff * 0.1 + random.uniform(-0.3, 0.3)
-            #self.temperature = max(18.0, min(26.0, self.temperature + change))
-            self.temperature = self.temperature + change  # без max/min
-            self.data["temperature"] = self.temperature
+            self.temperature = self.temperature + change
+            # Округляем для отображения, но оставляем точную для вычислений
+            display_temp = round(self.temperature, 1)
+            self.data["temperature"] = display_temp
             
             # Отправляем событие при значительном изменении (>0.5°C)
             if abs(change) > 0.5:
-                self.emit_event("temperature_changed", {"temperature": self.temperature})
+                self.emit_event("temperature_changed", {"temperature": display_temp})
+    
+    def get_status(self):
+        """Получить статус устройства с округленной температурой"""
+        status = super().get_status()
+        status["temperature"] = round(self.temperature, 1)
+        status["data"]["temperature"] = round(self.data.get("temperature", 22.0), 1)
+        status["data"]["target_temperature"] = round(self.data.get("target_temperature", 22.0), 1)
+        return status

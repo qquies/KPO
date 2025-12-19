@@ -307,7 +307,7 @@ class SmartHomeGUI:
         # Дополнительная информация
         if device_id == "thermostat":
             temp = device_info.get('data', {}).get('temperature', 'N/A')
-            ttk.Label(status_frame, text=f"🌡️ {round(temp,2)}°C", font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
+            ttk.Label(status_frame, text=f"🌡️ {int(temp)}°C", font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
         elif device_id == "lamp_living_room":
             brightness = device_info.get('data', {}).get('brightness', 'N/A')
             ttk.Label(status_frame, text=f"💡 {brightness}%", font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
@@ -743,3 +743,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

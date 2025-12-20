@@ -142,33 +142,33 @@ class SmartLight(BaseDevice):
                 self.data["temperature"] = round(new_temp, 1)
                 self.emit_event("temperature_changed", {"temperature": round(new_temp, 1)})
 
-    def _simulate_brightness(self):
-        """Симуляция изменения яркости (вызывается периодически)"""
-        if self.state == "on":
-            current_brightness = self.data.get("brightness", 80)
+    # def _simulate_brightness(self):
+    #     """Симуляция изменения яркости (вызывается периодически)"""
+    #     if self.state == "on":
+    #         current_brightness = self.data.get("brightness", 80)
             
-            # Имитация изменения яркости по времени суток или случайно
-            hour = datetime.now().hour
+    #         # Имитация изменения яркости по времени суток или случайно
+    #         hour = datetime.now().hour
             
-            # Утром (6-9) и вечером (18-22) - выше яркость
-            # Днем (10-17) - средняя яркость
-            # Ночью (23-5) - низкая яркость
+    #         # Утром (6-9) и вечером (18-22) - выше яркость
+    #         # Днем (10-17) - средняя яркость
+    #         # Ночью (23-5) - низкая яркость
             
-            if 6 <= hour <= 9 or 18 <= hour <= 22:
-                target_brightness = random.uniform(70, 100)
-            elif 10 <= hour <= 17:
-                target_brightness = random.uniform(50, 80)
-            else:  # ночь
-                target_brightness = random.uniform(20, 40)
+    #         if 6 <= hour <= 9 or 18 <= hour <= 22:
+    #             target_brightness = random.uniform(70, 100)
+    #         elif 10 <= hour <= 17:
+    #             target_brightness = random.uniform(50, 80)
+    #         else:  # ночь
+    #             target_brightness = random.uniform(20, 40)
             
-            # Плавное изменение яркости
-            diff = target_brightness - current_brightness
-            change = diff * 0.1 + random.uniform(-2, 2)
-            new_brightness = max(20, min(100, current_brightness + change))
+    #         # Плавное изменение яркости
+    #         diff = target_brightness - current_brightness
+    #         change = diff * 0.1 + random.uniform(-2, 2)
+    #         new_brightness = max(20, min(100, current_brightness + change))
             
-            if abs(new_brightness - current_brightness) > 1:
-                self.data["brightness"] = int(new_brightness)
-                self.emit_event("brightness_changed", {"brightness": int(new_brightness)})
+    #         if abs(new_brightness - current_brightness) > 1:
+    #             self.data["brightness"] = int(new_brightness)
+    #             self.emit_event("brightness_changed", {"brightness": int(new_brightness)})
 
     def _temperature_simulation_loop(self):
         """Фоновый поток для симуляции температуры"""
